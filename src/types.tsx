@@ -1,0 +1,21 @@
+export interface APIData {
+  name: string,
+  url: string,
+}
+
+export interface Pokemon {
+  id: number,
+  name: string,
+  sprite: string,
+  types: Type[]
+}
+
+export interface Type {
+  id: number,
+  name: string,
+  sprite: string,
+  type_effectiveness: {
+    offense: Map<string, number>,
+    defense: Map<string, number>,
+  },
+}
