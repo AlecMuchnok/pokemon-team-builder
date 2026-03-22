@@ -10,9 +10,9 @@ export interface Pokemon {
   types: Type[]
 }
 
-export interface Version {
+export interface Pokedex {
   name: string;
-  pokemon: Set<string>;
+  pokemon: Map<string, number>; // pokemon species name -> entry_number
 }
 
 export interface Type {

@@ -1,10 +1,10 @@
 import { createContext } from "react";
-import type { APIData, Pokemon, Type, Version } from "./types";
+import type { APIData, Pokemon, Type, Pokedex } from "./types";
 
-export const DataContext = createContext<{ allPokemon: APIData[], allTypes: Type[], allVersions: Version[] }>({
+export const DataContext = createContext<{ allPokemon: APIData[], allTypes: Type[], allPokedexes: Pokedex[] }>({
   allPokemon: [],
   allTypes: [],
-  allVersions: [],
+  allPokedexes: [],
 });
 
 export const TeamContext = createContext<{
