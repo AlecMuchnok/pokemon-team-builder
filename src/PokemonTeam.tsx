@@ -28,6 +28,7 @@ export function PokemonBox({ pokemon }: { pokemon: Pokemon | null }) {
 
 function TypeRelations() {
   const [teamCoverage, setTeamCoverage] = useState<Map<string, Coverage>>(new Map());
+  const [hoveredType, setHoveredType] = useState<Type | null>(null);
   const { team } = useContext(TeamContext);
   const { allTypes } = useContext(DataContext);
 
@@ -61,6 +62,17 @@ function TypeRelations() {
     calculateCoverage();
   }, [team, allTypes]);
 
+  const offenseHighlights: Set<string> = new Set(
+    hoveredType
+      ? allTypes.filter(t => (hoveredType.type_effectiveness.defense.get(t.name) ?? 1) === 2).map(t => t.name)
+      : []
+  );
+  const defenseHighlights: Set<string> = new Set(
+    hoveredType
+      ? allTypes.filter(t => (hoveredType.type_effectiveness.offense.get(t.name) ?? 1) <= 0.5).map(t => t.name)
+      : []
+  );
+
   return (
     <>
       <label className="block text-sm font-medium text-gray-700 mb-1">Coverage (Offensive/Defensive)</label>
@@ -68,12 +80,14 @@ function TypeRelations() {
         {allTypes.map((type) => {
           const offense: number = teamCoverage.get(type.name)?.offense ?? 1;
           const defense: number = teamCoverage.get(type.name)?.defense ?? 1;
-          
+          const offenseColor = offenseHighlights.has(type.name) ? 'bg-yellow-400' : offense > 1 ? 'bg-green-500' : offense < 1 ? 'bg-red-500' : '';
+          const defenseColor = defenseHighlights.has(type.name) ? 'bg-yellow-400' : defense < 1 ? 'bg-green-500' : defense > 1 ? 'bg-red-500' : '';
+
           return (
             <div className="flex items-center m-1" key={type.name}>
-              <div className={`w-5 h-5 border-2 border-gray-300 rounded-lg mx-1 ${offense > 1 ? 'bg-green-500' : offense < 1 ? 'bg-red-500' : ''}`} />
-              <div className={`w-5 h-5 border-2 border-gray-300 rounded-lg mx-1 ${defense < 1 ? 'bg-green-500' : defense > 1 ? 'bg-red-500' : ''}`} />
-              <img className="h-5 mx-1" src={type.sprite} alt={type.name} />
+              <div className={`w-5 h-5 border-2 border-gray-300 rounded-lg mx-1 ${offenseColor}`} />
+              <div className={`w-5 h-5 border-2 border-gray-300 rounded-lg mx-1 ${defenseColor}`} />
+              <img className="h-5 mx-1" src={type.sprite} alt={type.name} onMouseEnter={() => setHoveredType(type)} onMouseLeave={() => setHoveredType(null)} />
             </div>
           );
         })}

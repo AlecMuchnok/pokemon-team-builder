@@ -5,15 +5,21 @@ export interface APIData {
 
 export interface Pokemon {
   id: number,
-  name: string,
+  species: string,
   sprite: string,
   types: Type[]
+}
+
+export interface Pokedex {
+  name: string;
+  pokemon: Map<string, number>; // pokemon species name -> entry_number
 }
 
 export interface Type {
   id: number,
   name: string,
   sprite: string,
+  pokemon: Set<string>,
   type_effectiveness: {
     offense: Map<string, number>,
     defense: Map<string, number>,

@@ -1,8 +1,9 @@
 import { useState, useEffect, useContext } from 'react';
-import type { APIData, Pokemon, Type } from './types';
+import type { APIData, Pokemon, Pokedex, Type } from './types';
 import { DataContext, TeamContext } from './AppContext';
+import { formatPokemonName } from './utilities';
 
-function PokemonRow({ pokemon }: { pokemon: Pokemon }) {
+function PokemonRow({ pokemon, displayNumber }: { pokemon: Pokemon, displayNumber: number }) {
   const { team, onPokemonClick } = useContext(TeamContext);
 
   if (!pokemon) return (
@@ -11,9 +12,9 @@ function PokemonRow({ pokemon }: { pokemon: Pokemon }) {
 
   return (
     <tr key={pokemon.id} className={"h-20 hover:bg-gray-100" + (team.some((p) => p.id === pokemon.id) ? " bg-gray-300" : "")} onClick={() => onPokemonClick(pokemon)}>
-      <td>{pokemon.id}</td>
-      <td className="flex items-center justify-center"><img className="max-w-15 max-h-15 object-contain" src={pokemon.sprite} alt={pokemon.name} /></td>
-      <td>{pokemon.name ? pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1) : ''}</td>
+      <td>{displayNumber}</td>
+      <td className="flex items-center justify-center"><img className="max-w-15 max-h-15 object-contain" src={pokemon.sprite} alt={pokemon.species} /></td>
+      <td>{formatPokemonName(pokemon.species)}</td>
       <td><div className="h-full mx-1 flex items-center justify-center">{pokemon.types.map((type) => <img key={type.id} className="max-w-30 max-h-5 object-contain" src={type.sprite} alt={type.name} />)}</div></td>
     </tr>
   )
@@ -36,6 +37,54 @@ function FilterInput({ filterText, onFilterTextChange, }: {
   )
 }
 
+function TypeFilterDropdown({ value, onChange, placeholder, id }: {
+  value: string,
+  onChange: (text: string) => void,
+  placeholder: string,
+  id: string,
+}) {
+  const { allTypes } = useContext(DataContext);
+  const typeNames = allTypes.map((t) => t.name);
+
+  return (
+    <div className="w-full">
+      <input
+        type="text"
+        list={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-4 py-2 my-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pokemon-red"
+      />
+      <datalist id={id}>
+        {typeNames.map((name) => <option key={name} value={name.charAt(0).toUpperCase() + name.slice(1)} />)}
+      </datalist>
+    </div>
+  )
+}
+
+function PokedexFilterDropdown({ value, onChange }: {
+  value: string,
+  onChange: (text: string) => void,
+}) {
+  const { allPokedexes } = useContext(DataContext);
+
+  return (
+    <div className="w-full">
+      <input
+        type="text"
+        list="pokedex-filter"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-4 py-2 my-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pokemon-red"
+      />
+      <datalist id="pokedex-filter">
+        {allPokedexes.map((p: Pokedex) => <option key={p.name} value={p.name} />)}
+      </datalist>
+    </div>
+  );
+}
+
 function Paginate({ page, pageCount, onPageChange }: {
   page: number,
   pageCount: number,
@@ -50,7 +99,7 @@ function Paginate({ page, pageCount, onPageChange }: {
   );
 };
 
-function PokemonTable({ data }: { data: APIData[] }) {
+function PokemonTable({ data, pokedex }: { data: APIData[], pokedex: Pokedex | null }) {
   const [pokemon, setPokemon] = useState<Pokemon[]>([]);
   const { allTypes } = useContext(DataContext);
 
@@ -77,7 +126,7 @@ function PokemonTable({ data }: { data: APIData[] }) {
 
         pokemonList.push({
           id: json.id,
-          name: json.name,
+          species: json.species.name,
           sprite: json.sprites.front_default,
           types: types,
         });
@@ -102,7 +151,7 @@ function PokemonTable({ data }: { data: APIData[] }) {
         </thead>
         <tbody className="divide-y">
           {pokemon.map((p) => (
-            <PokemonRow key={p.name} pokemon={p} />
+            <PokemonRow key={p.species} pokemon={p} displayNumber={pokedex?.pokemon.get(p.species) ?? p.id} />
           ))}
         </tbody>
       </table>
@@ -112,8 +161,11 @@ function PokemonTable({ data }: { data: APIData[] }) {
 
 export function FilterablePokemonTable() {
   const [filterText, setFilterText] = useState('');
+  const [type1, setType1] = useState('');
+  const [type2, setType2] = useState('');
+  const [pokedex, setPokedex] = useState('National');
   const [page, setPage] = useState(0);
-  const { allPokemon } = useContext(DataContext);
+  const { allPokemon, allTypes, allPokedexes, idToSpecies } = useContext(DataContext);
 
   const POKEMON_PER_PAGE = 10;
 
@@ -122,19 +174,60 @@ export function FilterablePokemonTable() {
     setPage(0);
   }
 
+  function handleType1Change(text: string) {
+    setType1(text);
+    setPage(0);
+  }
+
+  function handleType2Change(text: string) {
+    setType2(text);
+    setPage(0);
+  }
+
+  function handlePokedexChange(text: string) {
+    setPokedex(text);
+    setPage(0);
+  }
+
+  const matchedType1 = allTypes.find((t) => t.name.toLowerCase() === type1.toLowerCase());
+  const matchedType2 = allTypes.find((t) => t.name.toLowerCase() === type2.toLowerCase());
+  const matchedPokedex = allPokedexes.find((d) => d.name.toLowerCase() === pokedex.toLowerCase()) ?? null;
+
   // Filter out special pokemon (id > 10000)
   const filteredPokemon = allPokemon.filter((p) => {
     const parts: string[] = p.url.split('/');
-    return +parts[parts.length - 2] <= 10000 && p.name.toLowerCase().includes(filterText.toLowerCase())
+    const id = +parts[parts.length - 2];
+    if (id > 10000) return false;
+    const species = idToSpecies.get(id) ?? p.name;
+    if (!species.toLowerCase().includes(filterText.toLowerCase())) return false;
+    if (matchedType1 && !matchedType1.pokemon.has(p.name)) return false;
+    if (matchedType2 && !matchedType2.pokemon.has(p.name)) return false;
+    if (matchedPokedex && !matchedPokedex.pokemon.has(species)) return false;
+    return true;
   });
 
-  const paginatedPokemon = filteredPokemon.slice(page * POKEMON_PER_PAGE, (page + 1) * POKEMON_PER_PAGE);
+  const sortedPokemon = matchedPokedex
+    ? [...filteredPokemon].sort((a, b) => {
+        const idA = +a.url.split('/').at(-2)!;
+        const idB = +b.url.split('/').at(-2)!;
+        const speciesA = idToSpecies.get(idA) ?? a.name;
+        const speciesB = idToSpecies.get(idB) ?? b.name;
+        return (matchedPokedex.pokemon.get(speciesA) ?? 0) - (matchedPokedex.pokemon.get(speciesB) ?? 0);
+      })
+    : filteredPokemon;
+
+  const paginatedPokemon = sortedPokemon.slice(page * POKEMON_PER_PAGE, (page + 1) * POKEMON_PER_PAGE);
 
   return (
     <div className="w-3/4 mx-auto">
       <FilterInput filterText={filterText} onFilterTextChange={handleFilterTextChange} />
-      <PokemonTable data={paginatedPokemon} />
-      <Paginate page={page} pageCount={Math.ceil(filteredPokemon.length / POKEMON_PER_PAGE)} onPageChange={setPage} />
+      <div className="flex gap-2">
+        <PokedexFilterDropdown value={pokedex} onChange={handlePokedexChange} />
+        <TypeFilterDropdown value={type1} onChange={handleType1Change} placeholder="Type 1" id="type1" />
+        <TypeFilterDropdown value={type2} onChange={handleType2Change} placeholder="Type 2" id="type2" />
+      </div>
+      <PokemonTable data={paginatedPokemon} pokedex={matchedPokedex} />
+      <Paginate page={page} pageCount={Math.ceil(sortedPokemon.length / POKEMON_PER_PAGE)} onPageChange={setPage} />
     </div>
   )
 }
