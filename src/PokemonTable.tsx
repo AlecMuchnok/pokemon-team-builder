@@ -11,11 +11,11 @@ function PokemonRow({ pokemon, displayNumber }: { pokemon: Pokemon, displayNumbe
   );
 
   return (
-    <tr key={pokemon.id} className={"h-20 hover:bg-gray-100" + (team.some((p) => p.id === pokemon.id) ? " bg-gray-300" : "")} onClick={() => onPokemonClick(pokemon)}>
+    <tr key={pokemon.id} className={(team.some((p) => p.id === pokemon.id) ? "h-20 bg-gray-300 hover:bg-gray-400" : "h-20 hover:bg-gray-100")} onClick={() => onPokemonClick(pokemon)}>
       <td>{displayNumber}</td>
-      <td className="flex items-center justify-center"><img className="max-w-15 max-h-15 object-contain" src={pokemon.sprite} alt={pokemon.species} /></td>
+      <td className="align-middle"><img className="max-w-15 max-h-15 mx-auto object-contain" src={pokemon.sprite} alt={pokemon.species} /></td>
       <td>{formatPokemonName(pokemon.species)}</td>
-      <td><div className="h-full mx-1 flex items-center justify-center">{pokemon.types.map((type) => <img key={type.id} className="max-w-30 max-h-5 object-contain" src={type.sprite} alt={type.name} />)}</div></td>
+      <td><div className="h-full min-w-60 mx-1 flex items-center justify-center">{pokemon.types.map((type) => <img key={type.id} className="max-w-30 max-h-5 object-contain" src={type.sprite} alt={type.name} />)}</div></td>
     </tr>
   )
 }
@@ -140,13 +140,13 @@ function PokemonTable({ data, pokedex }: { data: APIData[], pokedex: Pokedex | n
 
   return (
     <div className="border border-table-line rounded-lg overflow-hidden">
-      <table className="divide-y w-full table-auto mx-auto">
+      <table className="divide-y w-full table-fixed mx-auto">
         <thead className={`bg-pokemon-red text-gray-100`}>
           <tr>
-            <th className="px-1 py-2 w-1/6">Number</th>
-            <th className="px-1 py-2 w-1/6">Sprite</th>
-            <th className="px-1 py-2 w-1/3">Name</th>
-            <th className="px-1 py-2 w-1/3">Type</th>
+            <th className="px-1 py-2 w-[15%]">Number</th>
+            <th className="px-1 py-2 w-[15%]">Sprite</th>
+            <th className="px-1 py-2 w-[25%]">Name</th>
+            <th className="px-1 py-2 w-[45%]">Type</th>
           </tr>
         </thead>
         <tbody className="divide-y">
@@ -159,15 +159,36 @@ function PokemonTable({ data, pokedex }: { data: APIData[], pokedex: Pokedex | n
   )
 }
 
+function calcRowsPerPage() {
+  // Each row is h-20 (80px). ~260px overhead for header, filters, pagination, and root padding.
+  return Math.max(5, Math.floor((window.innerHeight - 260) / 80));
+}
+
 export function FilterablePokemonTable() {
   const [filterText, setFilterText] = useState('');
   const [type1, setType1] = useState('');
   const [type2, setType2] = useState('');
   const [pokedex, setPokedex] = useState('National');
   const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(calcRowsPerPage);
   const { allPokemon, allTypes, allPokedexes, idToSpecies } = useContext(DataContext);
 
-  const POKEMON_PER_PAGE = 10;
+  useEffect(() => {
+    function handleResize() {
+      const newRows = calcRowsPerPage();
+      setRowsPerPage((prevRows) => {
+        if (newRows === prevRows) return prevRows;
+        // Set the page to the one that has the previous first row's pokemon
+        setPage((prevPage) => {
+          const firstIndex = prevPage * prevRows;
+          return Math.floor(firstIndex / newRows);
+        });
+        return newRows;
+      });
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   function handleFilterTextChange(text: string) {
     setFilterText(text);
@@ -216,10 +237,10 @@ export function FilterablePokemonTable() {
       })
     : filteredPokemon;
 
-  const paginatedPokemon = sortedPokemon.slice(page * POKEMON_PER_PAGE, (page + 1) * POKEMON_PER_PAGE);
+  const paginatedPokemon = sortedPokemon.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
 
   return (
-    <div className="w-3/4 mx-auto">
+    <div className="flex-1 min-w-[532px] px-4">
       <FilterInput filterText={filterText} onFilterTextChange={handleFilterTextChange} />
       <div className="flex gap-2">
         <PokedexFilterDropdown value={pokedex} onChange={handlePokedexChange} />
@@ -227,7 +248,7 @@ export function FilterablePokemonTable() {
         <TypeFilterDropdown value={type2} onChange={handleType2Change} placeholder="Type 2" id="type2" />
       </div>
       <PokemonTable data={paginatedPokemon} pokedex={matchedPokedex} />
-      <Paginate page={page} pageCount={Math.ceil(sortedPokemon.length / POKEMON_PER_PAGE)} onPageChange={setPage} />
+      <Paginate page={page} pageCount={Math.ceil(sortedPokemon.length / rowsPerPage)} onPageChange={setPage} />
     </div>
   )
 }
