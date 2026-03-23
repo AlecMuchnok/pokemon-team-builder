@@ -15,7 +15,7 @@ export function PokemonBox({ pokemon }: { pokemon: Pokemon | null }) {
 	return (
     <div className="w-50 px-5 m-4 mx-auto">
       <div className={`h-40 border-2 border-gray-300 rounded-lg p-4 ${pokemon ? "hover:bg-gray-100" : ""}`} onClick={() => pokemon && onPokemonClick(pokemon)}>
-        <img className="w-full h-full" src={pokemon.sprite} alt={pokemon.name} />
+        <img className="w-full h-full" src={pokemon.sprite} alt={pokemon.species} />
       </div>
       <div className="w-full h-8 flex mx-auto py-2 items-center justify-center">
         {pokemon.types.map((type: Type) => {
