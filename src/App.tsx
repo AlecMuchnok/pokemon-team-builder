@@ -11,7 +11,7 @@ export default function App() {
   return (
     <DataContextProvider>
       <TeamContextProvider>
-        <div className="flex flex-wrap justify-center items-start">
+        <div className="flex flex-wrap justify-center items-start min-h-screen p-4">
           <PokemonTeam />
           <TeamCoverage />
           <FilterablePokemonTable />
