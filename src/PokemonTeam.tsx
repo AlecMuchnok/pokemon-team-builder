@@ -32,7 +32,7 @@ function PokemonImage({ pokemon }: { pokemon: Pokemon | null }) {
   const { onPokemonClick } = useContext(TeamContext);
 
   return (
-    <div className={`h-40 border-2 border-gray-300 rounded-lg p-4 ${pokemon ? "hover:bg-gray-100" : ""}`} onClick={() => pokemon && onPokemonClick(pokemon)}>
+    <div className={`h-40 border-2 border-gray-300 rounded-lg p-4 ${pokemon ? "hover:bg-gray-100 cursor-pointer" : ""}`} onClick={() => pokemon && onPokemonClick(pokemon)}>
       {pokemon && <img className="w-full h-full" src={pokemon.sprite} alt={pokemon.species} />}
     </div>
   )

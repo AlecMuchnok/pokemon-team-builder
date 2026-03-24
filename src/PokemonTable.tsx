@@ -107,6 +107,7 @@ function FilterInput({ filterText, onFilterTextChange, }: {
         type="text"
         value={filterText}
         onChange={(e) => onFilterTextChange(e.target.value)}
+        onFocus={(e) => e.target.select()}
         placeholder="Search by name"
         className={`w-full px-4 py-2 my-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pokemon-red`}
       />
@@ -127,6 +128,7 @@ function PokedexFilterDropdown({ value, onChange }: {
         list="pokedex-filter"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={(e) => e.target.select()}
         className="w-full px-4 py-2 my-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pokemon-red"
       />
       <datalist id="pokedex-filter">
@@ -152,6 +154,7 @@ function TypeFilterDropdown({ value, onChange, placeholder, id }: {
         list={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={(e) => e.target.select()}
         placeholder={placeholder}
         className="w-full px-4 py-2 my-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pokemon-red"
       />
@@ -230,7 +233,7 @@ function PokemonRow({ pokemon, displayNumber }: { pokemon: Pokemon, displayNumbe
   );
 
   return (
-    <tr key={pokemon.id} className={(team.some((p) => p.id === pokemon.id) ? "h-20 bg-gray-300 hover:bg-gray-400" : "h-20 hover:bg-gray-100")} onClick={() => onPokemonClick(pokemon)}>
+    <tr key={pokemon.id} className={(team.some((p) => p.id === pokemon.id) ? "h-20 bg-gray-300 hover:bg-gray-400 cursor-pointer" : "h-20 hover:bg-gray-100 cursor-pointer")} onClick={() => onPokemonClick(pokemon)}>
       <td>{displayNumber}</td>
       <td className="align-middle"><img className="max-w-15 max-h-15 mx-auto object-contain" src={pokemon.sprite} alt={pokemon.species} /></td>
       <td>{formatPokemonName(pokemon.species)}</td>

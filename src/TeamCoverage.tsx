@@ -50,7 +50,7 @@ export function TeamCoverage() {
   );
 
   return (
-    <div className="w-100 mx-auto">
+    <div className="w-100 mx-auto self-center">
       <p className="text-sm text-gray-600 mb-2">Left bubble: super effective move<br/>Right bubble: resistance/immunity</p>
       <label className="block text-sm font-medium text-gray-700 mb-1">Team Coverage</label>
       <div className="grid grid-cols-2 gap-0 w-100 mx-auto">
