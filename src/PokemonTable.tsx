@@ -1,7 +1,10 @@
 import { useState, useEffect, useContext } from 'react';
 import type { APIData, Pokemon, Pokedex, Type } from './types';
-import { DataContext, TeamContext } from './AppContext';
+import { DataContext } from './AppContext';
 import { formatPokemonName } from './utilities';
+import { useDispatch, useSelector } from 'react-redux';
+import type { RootState } from './store/store';
+import { addToTeam } from './features/teamSlice';
 
 export function FilterablePokemonTable() {
   const [filterText, setFilterText] = useState('');
@@ -227,14 +230,15 @@ function PokemonTable({ data, pokedex }: { data: APIData[], pokedex: Pokedex | n
 }
 
 function PokemonRow({ pokemon, displayNumber }: { pokemon: Pokemon, displayNumber: number }) {
-  const { team, onPokemonClick } = useContext(TeamContext);
+  const team = useSelector((state: RootState) => state.team.value);
+  const dispatch = useDispatch();
 
   if (!pokemon) return (
     <tr className="h-20 hover:bg-gray-100"></tr>
   );
 
   return (
-    <tr key={pokemon.id} className={(team.some((p) => p.id === pokemon.id) ? "h-20 bg-gray-300 hover:bg-gray-400 cursor-pointer" : "h-20 hover:bg-gray-100 cursor-pointer")} onClick={() => onPokemonClick(pokemon)}>
+    <tr key={pokemon.id} className={(team.some((p) => p.id === pokemon.id) ? "h-20 bg-gray-300 hover:bg-gray-400 cursor-pointer" : "h-20 hover:bg-gray-100 cursor-pointer")} onClick={() => dispatch(addToTeam(pokemon))}>
       <td>{displayNumber}</td>
       <td className="align-middle"><img className="max-w-15 max-h-15 mx-auto object-contain" src={pokemon.sprite} alt={pokemon.species} /></td>
       <td>{formatPokemonName(pokemon.species)}</td>

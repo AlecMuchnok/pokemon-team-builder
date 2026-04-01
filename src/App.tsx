@@ -3,20 +3,18 @@ import './App.css'
 import { FilterablePokemonTable } from './PokemonTable';
 import { PokemonTeam } from './PokemonTeam';
 import { TeamCoverage } from './TeamCoverage';
-import { DataContext, TeamContext } from './AppContext';
+import { DataContext } from './AppContext';
 import { flattenDamageRelations } from './utilities';
 import type { APIData, Pokemon, Type, Pokedex } from './types';
 
 export default function App() {
   return (
     <DataContextProvider>
-      <TeamContextProvider>
-        <div className="flex flex-wrap justify-center items-start min-h-screen p-4">
-          <PokemonTeam />
-          <TeamCoverage />
-          <FilterablePokemonTable />
-        </div>
-      </TeamContextProvider>
+      <div className="flex flex-wrap justify-center items-start min-h-screen p-4">
+        <PokemonTeam />
+        <TeamCoverage />
+        <FilterablePokemonTable />
+      </div>
     </DataContextProvider>
   )
 }
@@ -98,28 +96,5 @@ const DataContextProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <DataContext.Provider value={contextValue}>
       {children}
     </DataContext.Provider>
-  )
-}
-
-const TeamContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [team, setTeam] = useState<Pokemon[]>([]);
-
-  const onPokemonClick = useCallback((pokemon: Pokemon) => {
-    if (team.some((p) => p.id === pokemon.id)) {
-      setTeam(team.filter((p) => p.id !== pokemon.id));
-    }
-    else if (team.length < 6) {
-      setTeam([...team, pokemon]);
-    }
-  }, [team]);
-
-  const contextValue = useMemo(() => ({
-    team, onPokemonClick
-  }), [team, onPokemonClick]);
-
-  return (
-    <TeamContext.Provider value={contextValue}>
-      {children}
-    </TeamContext.Provider>
   )
 }

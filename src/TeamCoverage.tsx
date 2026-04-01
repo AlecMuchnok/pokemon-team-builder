@@ -1,12 +1,15 @@
 import { useState, useEffect, useContext } from 'react';
 import type { Type } from './types';
-import { DataContext, TeamContext } from './AppContext';
+import { DataContext } from './AppContext';
+import { useSelector } from 'react-redux';
+import type { RootState } from './store/store';
 
 export function TeamCoverage() {
   const [teamCoverage, setTeamCoverage] = useState<Map<string, Coverage>>(new Map());
   const [hoveredType, setHoveredType] = useState<Type | null>(null);
-  const { team } = useContext(TeamContext);
   const { allTypes } = useContext(DataContext);
+
+  const team = useSelector((state: RootState) => state.team.value);
 
   useEffect(() => {
     const calculateCoverage = async () => {

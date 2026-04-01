@@ -1,9 +1,10 @@
-import { useContext } from 'react';
 import type { Pokemon, Type } from './types';
-import { TeamContext } from './AppContext';
+import { useDispatch, useSelector } from 'react-redux';
+import { removeFromTeam } from './features/teamSlice';
+import type { RootState } from './store/store';
 
 export function PokemonTeam() {
-  const { team } = useContext(TeamContext)
+  const team = useSelector((state: RootState) => state.team.value);
 
   return (
     <div className="px-8 flex flex-wrap items-center justify-center self-center">
@@ -29,10 +30,10 @@ export function PokemonBox({ pokemon }: { pokemon: Pokemon | null }) {
 }
 
 function PokemonImage({ pokemon }: { pokemon: Pokemon | null }) {
-  const { onPokemonClick } = useContext(TeamContext);
+  const dispatch = useDispatch();
 
   return (
-    <div className={`h-40 border-2 border-gray-300 rounded-lg p-4 ${pokemon ? "hover:bg-gray-100 cursor-pointer" : ""}`} onClick={() => pokemon && onPokemonClick(pokemon)}>
+    <div className={`h-40 border-2 border-gray-300 rounded-lg p-4 ${pokemon ? "hover:bg-gray-100 cursor-pointer" : ""}`} onClick={() => pokemon && dispatch(removeFromTeam(pokemon))}>
       {pokemon && <img className="w-full h-full" src={pokemon.sprite} alt={pokemon.species} />}
     </div>
   )
