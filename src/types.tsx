@@ -12,7 +12,7 @@ export interface Pokemon {
 
 export interface Pokedex {
   name: string;
-  pokemon: Map<string, number>; // pokemon species name -> entry_number
+  pokemon: Record<string, number>; // pokemon species name -> entry_number
 }
 
 export interface Type {

@@ -1,11 +1,11 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import type { APIData, Pokemon, Pokedex, Type } from './types';
 import { DataContext } from './AppContext';
 import { formatPokemonName } from './utilities';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from './store/store';
 import { addToTeam } from './store/teamSlice';
-import { useGetAllPokemonQuery } from './services/pokeApi';
+import { useGetAllPokedexesQuery, useGetAllPokemonQuery, useGetPokedexQuery } from './services/pokeApi';
 
 export function FilterablePokemonTable() {
   const [filterText, setFilterText] = useState('');
@@ -14,36 +14,26 @@ export function FilterablePokemonTable() {
   const [pokedex, setPokedex] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(calcRowsPerPage);
-  const { allTypes, allPokedexes, idToSpecies } = useContext(DataContext);
+  const { allTypes } = useContext(DataContext);
 
-  const { data, error, isLoading } = useGetAllPokemonQuery();
+  const { data: pokemonData, error: pokemonError, isLoading: isPokemonLoading } = useGetAllPokemonQuery();
+  const { data: pokedexData, error: pokedexError, isLoading: isPokedexLoading } = useGetAllPokedexesQuery();
+  const { data: nationalPokedex, isLoading: isNationalLoading, error: nationalError } = useGetPokedexQuery('national');
 
-  useEffect(() => {
-    function handleResize() {
-      const newRows = calcRowsPerPage();
-      setRowsPerPage((prevRows) => {
-        if (newRows === prevRows) return prevRows;
-        // Set the page to the one that has the previous first row's pokemon
-        setPage((prevPage) => {
-          const firstIndex = prevPage * prevRows;
-          return Math.floor(firstIndex / newRows);
-        });
-        return newRows;
-      });
+  const idToSpecies = useMemo(() => {
+    const map = new Map<number, string>();
+    if (!nationalPokedex) return map;
+    for (const [species, entryNumber] of Object.entries(nationalPokedex.pokemon)) {
+      map.set(entryNumber, species);
     }
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    return map;
+  }, [nationalPokedex]);
 
-  if (error) {
-    return (
-      <div>There was an error retrieving Pokemon...</div>
-    );
-  } else if(isLoading) {
-    return (
-      <div>Loading Pokemon...</div>
-    );
-  }
+  const matchedDisplayName =
+    pokedexData?.find((p) => p.name.toLowerCase() === (pokedex.toLowerCase() || 'national'))?.name ?? 'National';
+  const pokedexName = matchedDisplayName.toLowerCase().replaceAll(' ', '-');
+  const { data: matchedPokedex, isLoading: isMatchedPokedexLoading, error: matchedPokedexError } =
+    useGetPokedexQuery(pokedexName);
 
   function handleFilterTextChange(text: string) {
     setFilterText(text);
@@ -65,25 +55,47 @@ export function FilterablePokemonTable() {
     setPage(0);
   }
 
+  useEffect(() => {
+    function handleResize() {
+      const newRows = calcRowsPerPage();
+      setRowsPerPage((prevRows) => {
+        if (newRows === prevRows) return prevRows;
+        // Set the page to the one that has the previous first row's pokemon
+        setPage((prevPage) => {
+          const firstIndex = prevPage * prevRows;
+          return Math.floor(firstIndex / newRows);
+        });
+        return newRows;
+      });
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  if (pokemonError || pokedexError || matchedPokedexError || nationalError) {
+    return (
+      <div>There was an error retrieving data...</div>
+    );
+  } else if (isPokemonLoading || isPokedexLoading || isMatchedPokedexLoading || isNationalLoading) {
+    return (
+      <div>Loading data...</div>
+    );
+  }
+
   const matchedType1 = allTypes.find((t) => t.name.toLowerCase() === type1.toLowerCase());
   const matchedType2 = allTypes.find((t) => t.name.toLowerCase() === type2.toLowerCase());
-  const matchedPokedex = allPokedexes.find((d) => d.name.toLowerCase() === (pokedex || 'national').toLowerCase()) ?? null;
 
-  // Filter out special pokemon (id > 10000)
-  let filteredPokemon : APIData[] = [];
-  if (data && !error && !isLoading) {
-    filteredPokemon = data.filter((p) => {
-      const parts: string[] = p.url.split('/');
-      const id = +parts[parts.length - 2];
-      if (id > 10000) return false;
-      const species = idToSpecies.get(id) ?? p.name;
-      if (!species.toLowerCase().includes(filterText.toLowerCase())) return false;
-      if (matchedType1 && !matchedType1.pokemon.includes(p.name)) return false;
-      if (matchedType2 && !matchedType2.pokemon.includes(p.name)) return false;
-      if (matchedPokedex && !matchedPokedex.pokemon.has(species)) return false;
-      return true;
-    });
-  }
+  const filteredPokemon : APIData[] = pokemonData?.filter((p) => {
+    const parts: string[] = p.url.split('/');
+    const id = +parts[parts.length - 2];
+    if (id > 10000) return false;
+    const species = idToSpecies.get(id) ?? p.name;
+    if (!species.toLowerCase().includes(filterText.toLowerCase())) return false;
+    if (matchedType1 && !matchedType1.pokemon.includes(p.name)) return false;
+    if (matchedType2 && !matchedType2.pokemon.includes(p.name)) return false;
+    if (matchedPokedex && !(species in matchedPokedex.pokemon)) return false;
+    return true;
+  }) || [];
 
   const sortedPokemon = matchedPokedex
     ? [...filteredPokemon].sort((a, b) => {
@@ -91,7 +103,7 @@ export function FilterablePokemonTable() {
         const idB = +b.url.split('/').at(-2)!;
         const speciesA = idToSpecies.get(idA) ?? a.name;
         const speciesB = idToSpecies.get(idB) ?? b.name;
-        return (matchedPokedex.pokemon.get(speciesA) ?? 0) - (matchedPokedex.pokemon.get(speciesB) ?? 0);
+        return (matchedPokedex.pokemon[speciesA] ?? 0) - (matchedPokedex.pokemon[speciesB] ?? 0);
       })
     : filteredPokemon;
 
@@ -101,7 +113,7 @@ export function FilterablePokemonTable() {
     <div className="flex-1 min-w-[532px] px-4">
       <FilterInput filterText={filterText} onFilterTextChange={handleFilterTextChange} />
       <div className="flex gap-2">
-        <PokedexFilterDropdown value={pokedex} onChange={handlePokedexChange} />
+        <PokedexFilterDropdown value={pokedex} onChange={handlePokedexChange} allPokedexes={pokedexData} />
         <TypeFilterDropdown value={type1} onChange={handleType1Change} placeholder="Type 1" id="type1" />
         <TypeFilterDropdown value={type2} onChange={handleType2Change} placeholder="Type 2" id="type2" />
       </div>
@@ -121,28 +133,27 @@ function FilterInput({ filterText, onFilterTextChange, }: {
   onFilterTextChange: (text: string) => void
 }) {
   return (
-    <form>
-      <input
-        type="text"
-        value={filterText}
-        onChange={(e) => onFilterTextChange(e.target.value)}
-        onFocus={(e) => e.target.select()}
-        placeholder="Search by name"
-        className={`w-full px-4 py-2 my-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pokemon-red`}
-      />
-    </form>
+    <input
+      id="pokemon-search"
+      type="text"
+      value={filterText}
+      onChange={(e) => onFilterTextChange(e.target.value)}
+      onFocus={(e) => e.target.select()}
+      placeholder="Search by name"
+      className={`w-full px-4 py-2 my-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pokemon-red`}
+    />
   )
 }
 
-function PokedexFilterDropdown({ value, onChange }: {
+function PokedexFilterDropdown({ value, onChange, allPokedexes }: {
   value: string,
   onChange: (text: string) => void,
+  allPokedexes: APIData[] | undefined
 }) {
-  const { allPokedexes } = useContext(DataContext);
-
   return (
     <div className="w-full">
       <input
+        id="pokedex"
         type="text"
         list="pokedex-filter"
         value={value}
@@ -152,7 +163,7 @@ function PokedexFilterDropdown({ value, onChange }: {
         className="w-full px-4 py-2 my-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pokemon-red"
       />
       <datalist id="pokedex-filter">
-        {allPokedexes.map((p: Pokedex) => <option key={p.name} value={p.name} />)}
+        { allPokedexes?.map((p: APIData) => <option key={p.name} value={p.name} />)}
       </datalist>
     </div>
   );
@@ -170,22 +181,23 @@ function TypeFilterDropdown({ value, onChange, placeholder, id }: {
   return (
     <div className="w-full">
       <input
+        id={id}
         type="text"
-        list={id}
+        list={`${id}-list`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={(e) => e.target.select()}
         placeholder={placeholder}
         className="w-full px-4 py-2 my-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pokemon-red"
       />
-      <datalist id={id}>
+      <datalist id={`${id}-list`}>
         {typeNames.map((name) => <option key={name} value={name.charAt(0).toUpperCase() + name.slice(1)} />)}
       </datalist>
     </div>
   )
 }
 
-function PokemonTable({ data, pokedex }: { data: APIData[], pokedex: Pokedex | null }) {
+function PokemonTable({ data, pokedex }: { data: APIData[], pokedex: Pokedex | undefined }) {
   const [pokemon, setPokemon] = useState<Pokemon[]>([]);
   const { allTypes } = useContext(DataContext);
 
@@ -237,7 +249,7 @@ function PokemonTable({ data, pokedex }: { data: APIData[], pokedex: Pokedex | n
         </thead>
         <tbody className="divide-y">
           {pokemon.map((p) => (
-            <PokemonRow key={p.species} pokemon={p} displayNumber={pokedex?.pokemon.get(p.species) ?? p.id} />
+            <PokemonRow key={p.species} pokemon={p} displayNumber={pokedex?.pokemon[p.species] ?? p.id} />
           ))}
         </tbody>
       </table>
