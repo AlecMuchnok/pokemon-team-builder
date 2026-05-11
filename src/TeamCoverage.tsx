@@ -1,13 +1,13 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import type { Type } from './types';
-import { DataContext } from './AppContext';
 import { useSelector } from 'react-redux';
 import type { RootState } from './store/store';
+import { useGetAllTypesQuery } from './services/pokeApi';
 
 export function TeamCoverage() {
   const [teamCoverage, setTeamCoverage] = useState<Map<string, Coverage>>(new Map());
   const [hoveredType, setHoveredType] = useState<Type | null>(null);
-  const { allTypes } = useContext(DataContext);
+  const { data: allTypes = [] } = useGetAllTypesQuery();
 
   const team = useSelector((state: RootState) => state.team.value);
 

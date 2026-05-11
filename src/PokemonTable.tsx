@@ -1,12 +1,11 @@
-import { useState, useEffect, useContext, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { APIData, Pokemon, Pokedex, Type } from './types';
-import { DataContext } from './AppContext';
 import { formatPokemonName, TYPE_IDS } from './utilities';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from './store/store';
 import { addToTeam } from './store/teamSlice';
 import { skipToken } from '@reduxjs/toolkit/query';
-import { useGetAllPokedexesQuery, useGetAllPokemonQuery, useGetPokedexQuery, useGetTypeQuery } from './services/pokeApi';
+import { useGetAllPokedexesQuery, useGetAllPokemonQuery, useGetAllTypesQuery, useGetPokedexQuery, useGetTypeQuery } from './services/pokeApi';
 
 export function FilterablePokemonTable() {
   const [filterText, setFilterText] = useState('');
@@ -175,9 +174,6 @@ function TypeFilterDropdown({ value, onChange, placeholder, id }: {
   placeholder: string,
   id: string,
 }) {
-  const { allTypes } = useContext(DataContext);
-  const typeNames = allTypes.map((t) => t.name);
-
   return (
     <div className="w-full">
       <input
@@ -191,7 +187,7 @@ function TypeFilterDropdown({ value, onChange, placeholder, id }: {
         className="w-full px-4 py-2 my-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pokemon-red"
       />
       <datalist id={`${id}-list`}>
-        {typeNames.map((name) => <option key={name} value={name.charAt(0).toUpperCase() + name.slice(1)} />)}
+        {Object.keys(TYPE_IDS).map((name) => <option key={name} value={name.charAt(0).toUpperCase() + name.slice(1)} />)}
       </datalist>
     </div>
   )
@@ -199,14 +195,13 @@ function TypeFilterDropdown({ value, onChange, placeholder, id }: {
 
 function PokemonTable({ data, pokedex }: { data: APIData[], pokedex: Pokedex | undefined }) {
   const [pokemon, setPokemon] = useState<Pokemon[]>([]);
-  const { allTypes } = useContext(DataContext);
+
+  const { data: allTypes } = useGetAllTypesQuery();
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (allTypes.length === 0) {
-        return;
-      }
+    if (!allTypes) return;
 
+    const fetchData = async () => {
       const pokemonList : Pokemon[] = [];
 
       for (const p of data) {

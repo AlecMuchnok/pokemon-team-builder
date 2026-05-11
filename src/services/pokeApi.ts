@@ -1,7 +1,25 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { APIData, Pokedex, Type } from '../types';
 import type { APIResponse } from './apiTypes';
-import { flattenDamageRelations } from '../utilities';
+import { flattenDamageRelations, TYPE_IDS } from '../utilities';
+
+type TypeResponse = {
+	id: number;
+	name: string;
+	sprites: { 'generation-ix': { 'scarlet-violet': { name_icon: string } } };
+	pokemon: { pokemon: { name: string } }[];
+	damage_relations: Parameters<typeof flattenDamageRelations>[0];
+};
+
+function parseTypeResponse(response: TypeResponse): Type {
+	return {
+		id: response.id,
+		name: response.name,
+		sprite: response.sprites['generation-ix']['scarlet-violet'].name_icon,
+		pokemon: response.pokemon.map((entry) => entry.pokemon.name),
+		type_effectiveness: flattenDamageRelations(response.damage_relations),
+	};
+}
 
 export const pokeApi = createApi({
 	reducerPath: 'pokeApi',
@@ -36,19 +54,19 @@ export const pokeApi = createApi({
 		}),
 		getType: builder.query<Type, string | number>({
 			query: (idOrName) => `type/${idOrName}`,
-			transformResponse: (response: {
-				id: number;
-				name: string;
-				sprites: { 'generation-ix': { 'scarlet-violet': { name_icon: string } } };
-				pokemon: { pokemon: { name: string } }[];
-				damage_relations: Parameters<typeof flattenDamageRelations>[0];
-			}): Type => ({
-				id: response.id,
-				name: response.name,
-				sprite: response.sprites['generation-ix']['scarlet-violet'].name_icon,
-				pokemon: response.pokemon.map((entry) => entry.pokemon.name),
-				type_effectiveness: flattenDamageRelations(response.damage_relations),
-			}),
+			transformResponse: (response: TypeResponse): Type => parseTypeResponse(response),
+		}),
+		getAllTypes: builder.query<Type[], void>({
+			async queryFn(_arg, _api, _extra, baseQuery) {
+				const ids = Object.values(TYPE_IDS);
+				const results = await Promise.all(ids.map((id) => baseQuery(`type/${id}`)));
+				const types: Type[] = [];
+				for (const result of results) {
+					if (result.error) return { error: result.error };
+					types.push(parseTypeResponse(result.data as TypeResponse));
+				}
+				return { data: types };
+			},
 		}),
 	}),
 })
@@ -58,4 +76,5 @@ export const {
 	useGetAllPokedexesQuery,
 	useGetPokedexQuery,
 	useGetTypeQuery,
+	useGetAllTypesQuery,
 } = pokeApi
