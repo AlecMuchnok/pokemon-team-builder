@@ -1,12 +1,15 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import type { Type } from './types';
-import { DataContext, TeamContext } from './AppContext';
+import { useSelector } from 'react-redux';
+import type { RootState } from './store/store';
+import { useGetAllTypesQuery } from './services/pokeApi';
 
 export function TeamCoverage() {
   const [teamCoverage, setTeamCoverage] = useState<Map<string, Coverage>>(new Map());
   const [hoveredType, setHoveredType] = useState<Type | null>(null);
-  const { team } = useContext(TeamContext);
-  const { allTypes } = useContext(DataContext);
+  const { data: allTypes = [] } = useGetAllTypesQuery();
+
+  const team = useSelector((state: RootState) => state.team.value);
 
   useEffect(() => {
     const calculateCoverage = async () => {
@@ -20,10 +23,10 @@ export function TeamCoverage() {
 
       allTypes.forEach(async (type) => {
         const teamOffense: number[] = teamTypes.map<number>((types) =>
-          types.reduce((acc: number, pType) => Math.max(acc, pType.type_effectiveness.offense.get(type.name) ?? 1), 0)
+          types.reduce((acc: number, pType) => Math.max(acc, pType.type_effectiveness.offense[type.name] ?? 1), 0)
         )
         const teamDefense: number[] = teamTypes.map<number>((types) =>
-          types.reduce((acc: number, pType) => acc * (pType.type_effectiveness.defense.get(type.name) ?? 1), 1)
+          types.reduce((acc: number, pType) => acc * (pType.type_effectiveness.defense[type.name] ?? 1), 1)
         )
 
         coverage.set(type.name, {
@@ -40,19 +43,19 @@ export function TeamCoverage() {
 
   const offenseHighlights: Set<string> = new Set(
     hoveredType
-      ? allTypes.filter(t => (hoveredType.type_effectiveness.defense.get(t.name) ?? 1) === 2).map(t => t.name)
+      ? allTypes.filter(t => (hoveredType.type_effectiveness.defense[t.name] ?? 1) === 2).map(t => t.name)
       : []
   );
   const defenseHighlights: Set<string> = new Set(
     hoveredType
-      ? allTypes.filter(t => (hoveredType.type_effectiveness.offense.get(t.name) ?? 1) <= 0.5).map(t => t.name)
+      ? allTypes.filter(t => (hoveredType.type_effectiveness.offense[t.name] ?? 1) <= 0.5).map(t => t.name)
       : []
   );
 
   return (
     <div className="w-100 mx-auto self-center">
       <p className="text-sm text-gray-600 mb-2">Left bubble: super effective move<br/>Right bubble: resistance/immunity</p>
-      <label className="block text-sm font-medium text-gray-700 mb-1">Team Coverage</label>
+      <p className="block text-sm font-medium text-gray-700 mb-1">Team Coverage</p>
       <div className="grid grid-cols-2 gap-0 w-100 mx-auto">
         {allTypes.map((type) => {
           const offense: number = teamCoverage.get(type.name)?.offense ?? 1;

@@ -1,5 +1,26 @@
 import type { Type } from "./types";
 
+export const TYPE_IDS: Record<string, number> = {
+  normal: 1,
+  fighting: 2,
+  flying: 3,
+  poison: 4,
+  ground: 5,
+  rock: 6,
+  bug: 7,
+  ghost: 8,
+  steel: 9,
+  fire: 10,
+  water: 11,
+  grass: 12,
+  electric: 13,
+  psychic: 14,
+  ice: 15,
+  dragon: 16,
+  dark: 17,
+  fairy: 18,
+};
+
 const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
   'nidoran-f': 'Nidoran\u2640',
   'nidoran-m': 'Nidoran\u2642',
@@ -15,33 +36,32 @@ export function formatPokemonName(species: string): string {
 }
 
 export function flattenDamageRelations(damage_relations: DamageRelations) {
-  // Maps type name to effectiveness
-  const offense : Map<string, number> = new Map();
+  const offense : Record<string, number> = {};
 
   for (const type of damage_relations.double_damage_to) {
-    offense.set(type.name, 2);
+    offense[type.name] = 2;
   }
 
   for (const type of damage_relations.half_damage_to) {
-    offense.set(type.name, 0.5);
+    offense[type.name] = 0.5;
   }
 
   for (const type of damage_relations.no_damage_to) {
-    offense.set(type.name, 0);
+    offense[type.name] = 0;
   }
 
-  const defense : Map<string, number> = new Map();
+  const defense : Record<string, number> = {};
 
   for (const type of damage_relations.double_damage_from) {
-    defense.set(type.name, 2);
+    defense[type.name] = 2;
   }
 
   for (const type of damage_relations.half_damage_from) {
-    defense.set(type.name, 0.5);
+    defense[type.name] = 0.5;
   }
 
   for (const type of damage_relations.no_damage_from) {
-    defense.set(type.name, 0);
+    defense[type.name] = 0;
   }
 
   return { offense, defense }

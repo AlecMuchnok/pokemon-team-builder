@@ -12,16 +12,16 @@ export interface Pokemon {
 
 export interface Pokedex {
   name: string;
-  pokemon: Map<string, number>; // pokemon species name -> entry_number
+  pokemon: Record<string, number>; // pokemon species name -> entry_number
 }
 
 export interface Type {
   id: number,
   name: string,
   sprite: string,
-  pokemon: Set<string>,
+  pokemon: Array<string>,
   type_effectiveness: {
-    offense: Map<string, number>,
-    defense: Map<string, number>,
+    offense: Record<string, number>,
+    defense: Record<string, number>,
   },
 }
